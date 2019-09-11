@@ -2,3 +2,5 @@
 
 Simply a small POC I spinned up to play around with Elm and get aquainted
 with the language.
+
+![Screenshot](/task-screenshot.png)
