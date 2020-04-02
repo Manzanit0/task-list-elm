@@ -1,6 +1,7 @@
-module Models exposing (Task)
+module Models exposing (Todo)
 
 import Time
 
-type alias Task =
-    { description : String, date : Time.Posix }
+
+type alias Todo =
+    { description : String, date : Time.Posix, assignee : String }

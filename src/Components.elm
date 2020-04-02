@@ -5,14 +5,14 @@ import Element.Background as Background
 import Element.Border as Border
 import Element.Input as Input
 import Helpers exposing (toDateString)
-import Models exposing (Task)
+import Models exposing (Todo)
 
 
 blue =
     Element.rgb255 135 206 250
 
 
-tasksTable : List Task -> Element msg
+tasksTable : List Todo -> Element msg
 tasksTable data =
     Element.table []
         { data = data
@@ -22,6 +22,12 @@ tasksTable data =
               , view =
                     \task ->
                         Element.text task.description
+              }
+            , { header = Element.text "Assignee"
+              , width = fill
+              , view =
+                    \task ->
+                        Element.text task.assignee
               }
             , { header = Element.text "Date created"
               , width = fill

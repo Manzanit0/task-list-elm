@@ -3,13 +3,12 @@ module Main exposing (Model, Msg(..), addTaskButton, init, main, update, view)
 import Browser
 import Components exposing (button, input, tasksTable)
 import Element exposing (..)
-import Element.Background as Background
-import Element.Border as Border
-import Element.Input as Input
 import Html exposing (Html)
-import Models exposing (Task)
+import Http
+import Json.Decode exposing (Decoder, field, string)
+import Models exposing (Todo)
 import Task
-import Time exposing (toHour, toMinute, toSecond, utc)
+import Time
 
 
 main =
@@ -21,7 +20,7 @@ main =
 
 
 type alias Model =
-    { tasks : List Task, taskName : String }
+    { tasks : List Todo, taskName : String }
 
 
 init : () -> ( Model, Cmd msg )
@@ -47,6 +46,7 @@ type Msg
     | RemoveTask String
     | Change String
     | OnTime String Time.Posix
+    | GotPerson String (Result Http.Error String)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -62,7 +62,15 @@ update msg model =
             ( { model | tasks = List.filter (\current -> current.description /= description) model.tasks }, Cmd.none )
 
         OnTime description datetime ->
-            ( { model | tasks = appendTask model.tasks description datetime }, Cmd.none )
+            ( { model | tasks = appendTask model.tasks description datetime }, asyncPersonGenerator description )
+
+        GotPerson description result ->
+            case result of
+                Ok body ->
+                    ( { model | tasks = appendAssigneeToTask model.tasks description body }, Cmd.none )
+
+                Err _ ->
+                    ( model, asyncPersonGenerator description )
 
 
 
@@ -104,16 +112,41 @@ taskNameInput taskName =
 -- Business logic
 
 
+asyncPersonGenerator : String -> Cmd Msg
+asyncPersonGenerator description =
+    Http.get
+        { url = "https://uinames.com/api/"
+        , expect = Http.expectJson (GotPerson description) personDecoder
+        }
+
+
 asyncTaskCreation : String -> Cmd Msg
 asyncTaskCreation description =
     Task.perform (OnTime description) Time.now
 
 
-newTask : String -> Time.Posix -> Task
-newTask description date =
-    { description = description, date = date }
+newTask : String -> Time.Posix -> String -> Todo
+newTask description date assignee =
+    { description = description, date = date, assignee = assignee }
 
 
-appendTask : List Task -> String -> Time.Posix -> List Task
+appendTask : List Todo -> String -> Time.Posix -> List Todo
 appendTask tasks taskDescription datetime =
-    List.append [ newTask taskDescription datetime ] tasks
+    List.append [ newTask taskDescription datetime "" ] tasks
+
+
+appendAssigneeToTask : List Todo -> String -> String -> List Todo
+appendAssigneeToTask tasks taskDescription assignee =
+    List.map
+        (\task ->
+            if task.description == taskDescription then
+                newTask task.description task.date assignee
+
+            else
+                task
+        )
+        tasks
+
+
+personDecoder =
+    field "name" string
